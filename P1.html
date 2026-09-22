@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Palettes by the Decade</title>
+  <style>
+    body{
+      text-align: center;
+      font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    }
+    
+    h1 {
+      margin-top: 50px;
+      margin-bottom: 100px;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+
+    .imgContainer {
+      flex: 1;
+    }
+</style>
+</head>
+
+<body>
+  <h1>Decade Palettes Data</h1>
+  <div id = "container"></div>
+ 
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const myQuery = `
+        query {
+          object(general: "flag", yearRange: {from: 1980, to: 1989}, hasImages: true) { 
+            title
+            id
+            date
+            description
+            color
+            multimedia
+            geography
+          }
+        }
+      `;
+
+      const fetchData = async () => {
+        const response = await fetch('https://api.cooperhewitt.org/', {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: myQuery })
+        });
+
+        const data = await response.json();
+        return data;
+      };
+
+      data = await fetchData();
+       
+      console.log(data)
+      const rows = data.data.object;
+
+      const container = document.querySelector("#container")
+      container.innerHTML = "";
+
+      for (let i = 0; i <= rows.length; i++){
+
+        const imgSrc = rows[i].multimedia[0].preview.url;
+        const objectDate = rows[i].date[0].value;
+        const imgColor = rows[i].color
+        console.log(imgSrc, objectDate);
+        
+        const imgContainer = document.createElement("div");
+        imgContainer.classList.add("imgContainer");
+        const fig = document.createElement('figure');
+        const imgEl = document.createElement("img");
+        imgEl.src = imgSrc;
+        const caption = document.createElement("figcaption")
+        caption.textContent = "Date: " + objectDate + " Color: " + imgColor;
+
+        fig.appendChild(imgEl);
+        fig.appendChild(caption);
+        imgContainer.appendChild(fig);
+        container.appendChild(imgContainer)
+      }
+
+      
+
+// "flag" "wallpaper" "wallcover" "poster" "mug" "billboard" "lamp" "Andy Warhol"
+     
+
+    
+
+    });
+  </script>
+</body>
+</html>

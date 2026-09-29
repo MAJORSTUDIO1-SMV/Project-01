@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Textile Palettes</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Impact, "Arial Black", "Trebuchet MS", sans-serif;
+            font-size: 18px;
+            background-color: #0f1115;
+            color: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 40px;
+        }
+
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 400;
+            letter-spacing: -0.001em;
+            color: #ffffff;
+            padding: 10px;
+            border-bottom: 3px solid #f75104ea;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .subtitle{
+            font-size: 1.2rem;
+            text-transform: capitalize;
+            letter-spacing: 0.125em;
+            margin-top: 5px;
+            margin-bottom: 40px;
+        }
+
+        .main_container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            max-width: 1300px;
+            gap: 16px;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 20px 10px;
+        }
+
+        #decade_label {
+            display: flex;
+            font-size: 1rem;
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            color: #cbd5e1;
+            background: #1e232d;
+            padding: 4px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            justify-content: center;
+            align-items: center;
+            border-radius: 50px;
+            margin-top: 20px;
+            margin-bottom: 5px;
+
+        }
+
+        /* Decade container stacking color chips vertically */
+        .decade_container {
+            display: flex;
+            flex-direction: column-reverse;
+            width: 88px;
+            border-radius: 10px;
+            background: #161920;
+            padding: 6px;
+            gap: 6px;
+            box-shadow: 0 2px 10px 3px rgba(255, 255, 255, 0.15);
+        }
+
+
+        .decade_container > div {
+            width: 100% !important;
+            height: 36px !important;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .decade_container:hover {
+            transform: translate(0.5px, -7px);
+            transition: transform 0.1s ease-in-out;
+        }
+
+    </style>
+</head>
+<body>
+    <h1>Textile Color Palette by the Decade</h1>
+    <p class="subtitle"> 1989 Textiles explored through color</p>
+    <div class="main_container"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            res = await fetch("./Textiles_Colors_By_Decade.json");
+            data = await res.json();
+            
+            for (const decade of Object.entries(data)){ // loops for decades 
+                count = 0
+
+                const label = document.createElement("div");
+                label.setAttribute("id", "decade_label")
+                label.textContent = decade[0];
+
+                const div = document.createElement("div");
+                div.classList.add("decade_container");
+
+                document.querySelector(".main_container").appendChild(div)
+                div.appendChild(label)
+
+                decade[1].forEach((element) => { // loops through all colors in a decade 
+                    if (!element[0].includes("gray") && !element[0].includes("silver") && count < 10){ // removes all grays and silvers possible background colors
+                        const color_box = document.createElement("div")
+                        color_box.style.backgroundColor = element[0];
+                        div.appendChild(color_box);
+                        
+                        console.log(label, element);
+                        count += 1;
+                        
+                    }        
+                });
+            }
+        });
+        
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <title>Textile Palettes</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Impact, "Arial Black", "Trebuchet MS", sans-serif;
+            font-size: 18px;
+            background-color: #0f1115;
+            color: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 400;
+            letter-spacing: -0.001em;
+            color: #ffffff;
+            padding: 10px;
+            border-bottom: 3px solid #f75104ea;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            text-transform: capitalize;
+            letter-spacing: 0.125em;
+            margin-top: 5px;
+            margin-bottom: 20px;
+        }
+
+        .main_container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            width: 100%;
+            max-width: 1200px;
+            gap: 20px;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 20px 10px;
+            height: 550px;
+            position: relative;
+        }
+
+    
+        .total_summary {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 3px solid #f75104ea; /* Línea divisoria en el mismo color naranja del h1 */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* center alignment */
+            text-align: center;
+        }
+
+        .total_summary .total_label {
+            font-family: Arial, "Trebuchet MS", sans-serif;
+            font-size: 1.1rem;
+            text-transform: capitalize;
+            letter-spacing: 0.125em;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        .total_summary .total_number {
+            font-family: Impact, "Arial Black", sans-serif;
+            font-size: 2.8rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            color: #ffffff;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip {
+            position: absolute;
+            text-align: left;
+            padding: 12px;
+            font: 14px "Arial", sans-serif;
+            background: rgba(30, 35, 45, 0.95);
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 6px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        
+        .tooltip span.color-name {
+            font-weight: bold;
+            text-transform: uppercase;
+            display: block;
+            margin-bottom: 6px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #666;
+            font-size: 16px;
+        }
+
+        .axis-label {
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif, sans-serif;
+            font-size: 12px;
+            fill: #cbd5e1;
+        }
+        
+        .y-axis line, .y-axis path {
+            stroke: #444;
+        }
+        
+        .x-axis line, .x-axis path {
+            display: none;
+        }
+        
+        .x-axis text {
+            font-family: "Impact", sans-serif;
+            font-size: 18px;
+            fill: #cbd5e1;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <h1>Textile Color Palette by the Decade</h1>
+    <p class="subtitle">Cooper Hewitt Textile collection explored through color</p>
+    
+    <div class="main_container" id="chart">
+        <div id="tooltip" class="tooltip"></div>
+    </div>
+
+    <!-- container of total summary -->
+    <div class="total_summary">
+        <span class="total_label">Total textiles objects</span>
+        <span id="grand_total" class="total_number">0</span>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const res = await fetch("./Textiles_Colors_By_Decade1.json");
+            const rawData = await res.json();
+            
+            const decades = Object.keys(rawData).sort((a, b) => parseInt(a) - parseInt(b));
+            
+            const globalColorOrder = [
+                "black", "darkslategray", "dimgray", "gray", "slategray", "lightslategray", "darkgray", "silver", "lightgray", "gainsboro",
+                "saddlebrown", "sienna", "chocolate", "brown", "maroon", "darkgoldenrod", "goldenrod", "peru", "sandybrown", "burlywood", "tan", "rosybrown",
+                "darkred", "firebrick", "crimson", "indianred", "tomato", "lightcoral", "salmon", "darksalmon", "palevioletred", "mediumvioletred", "hotpink", "pink", "lightpink", "mistyrose",
+                "orangered", "darkorange", "orange", "gold", "khaki", "darkkhaki", "palegoldenrod", "lightgoldenrodyellow", "lightyellow",
+                "darkolivegreen", "olive", "olivedrab", "forestgreen", "greenyellow", "yellowgreen", "seagreen", "mediumseagreen", "darkseagreen", "mediumaquamarine",
+                "midnightblue", "darkslateblue", "slateblue", "indigo", "purple", "darkmagenta", "plum", "thistle", "lavender", "cadetblue", "steelblue", "cornflowerblue", "lightblue", "powderblue", "skyblue", "paleturquoise", "mediumturquoise",
+                "wheat", "bisque", "blanchedalmond", "antiquewhite", "beige", "honeydew", "lavenderblush", "white"
+            ];
+
+            const chartData = decades.map(decade => {
+                let decEntry = rawData[decade];
+                let allColors = Array.isArray(decEntry) ? decEntry : (decEntry.colors || []);
+                
+                let filteredColors = allColors.filter(c => !c[0].includes("gray") && !c[0].includes("silver"));
+                let top10 = filteredColors.slice(0, 10);
+                
+                top10.sort((a, b) => {
+                    let indexA = globalColorOrder.indexOf(a[0]);
+                    let indexB = globalColorOrder.indexOf(b[0]);
+                    if (indexA === -1) indexA = 999;
+                    if (indexB === -1) indexB = 999;
+                    return indexB - indexA;
+                });
+
+                const totalColorCount = top10.reduce((sum, item) => sum + item[1], 0);
+                const totalObjectsDecade = allColors.reduce((sum, item) => sum + item[1], 0);
+
+                let currentY0 = 0;
+                let stacked = top10.map(colorItem => {
+                    const count = colorItem[1];
+                    const percentage = totalColorCount > 0 ? (count / totalColorCount) * 100 : 0;
+                    
+                    const result = {
+                        color: colorItem[0],
+                        count: count,
+                        percentage: percentage,
+                        y0: currentY0,
+                        y1: currentY0 + percentage
+                    };
+                    currentY0 += percentage;
+                    return result;
+                });
+                
+                return {
+                    decade: decade,
+                    totalObjects: totalObjectsDecade,
+                    stacked: stacked
+                };
+            });
+
+            //  total count 
+            const grandTotal = chartData.reduce((acc, curr) => acc + curr.totalObjects, 0);
+            document.getElementById("grand_total").textContent = grandTotal.toLocaleString();
+
+            // Config D3
+            const container = d3.select("#chart");
+            const width = container.node().getBoundingClientRect().width;
+            const height = 550;
+            const margin = {top: 30, right: 20, bottom: 60, left: 60};
+            
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+
+            const svg = container.append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const x = d3.scaleBand()
+                .domain(chartData.map(d => d.decade))
+                .range([0, chartWidth])
+                .padding(0.3);
+
+            const y = d3.scaleLinear()
+                .domain([0, 100])
+                .range([chartHeight, 0]);
+
+            svg.append("g")
+                .attr("class", "y-axis axis-label")
+                .call(d3.axisLeft(y).tickFormat(d => d + "%").ticks(5))
+                .call(g => g.select(".domain").remove())
+                .call(g => g.selectAll(".tick line").attr("x2", chartWidth).attr("stroke-opacity", 0.1));
+
+            const decadeGroups = svg.selectAll(".decade-group")
+                .data(chartData)
+                .enter().append("g")
+                .attr("class", "decade-group")
+                .attr("transform", d => `translate(${x(d.decade)}, 0)`);
+
+            const tooltip = d3.select("#tooltip");
+
+            decadeGroups.selectAll("rect")
+                .data(d => d.stacked.map(s => ({...s, parentDecade: d.decade})))
+                .enter().append("rect")
+                .attr("width", x.bandwidth())
+                .attr("y", d => y(d.y1))
+                .attr("height", d => y(d.y0) - y(d.y1))
+                .attr("fill", d => d.color)
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .attr("opacity", 0.8)
+                        .attr("stroke", "#ffffff")
+                        .attr("stroke-width", 2);
+                    
+                    tooltip.transition().duration(200).style("opacity", 1);
+                    tooltip.html(`
+                        <span class="color-name" style="color:${d.color === 'white' ? '#ccc' : d.color}">${d.color}</span>
+                        Decade: ${d.parentDecade}<br/>
+                        Percentage: ${d.percentage.toFixed(1)}% <br/>
+                        Objects: ${d.count} objects
+                    `)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 30) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(this)
+                        .attr("opacity", 1)
+                        .attr("stroke", "none");
+                    tooltip.transition().duration(500).style("opacity", 0);
+                });
+
+            
+            const xAxisG = svg.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${chartHeight})`)
+                .call(d3.axisBottom(x));
+            
+            xAxisG.selectAll(".tick text").attr("y", 15);
+
+            
+        });
+    </script>
+</body>
+</html>

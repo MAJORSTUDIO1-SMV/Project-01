@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Space+Grotesk:wght@400;500;600&display=swap');
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #121212;
+            color: #f4f4f4;
+            font-family: 'Space Grotesk', sans-serif;
+            letter-spacing: 1px;
+            padding: 15px;
+        }
+
+        #main-header {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 0 10px 0;
+        }
+
+        #main-header h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 2.25rem; 
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+            margin-bottom: 6px;
+        }
+
+        .subtitle {
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #a0a0a0;
+            margin-bottom: 15px;    
+        }
+
+        .header-divider {
+            width: 700px;
+            height: 2px;
+            border-radius: 0.5px;
+            background-color: #ff3300;
+            margin: 0 auto 25px auto;
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: #a0a0a0;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 16px;
+            border-radius: 20px;
+            letter-spacing: 1.5px;
+            font-family: "Space Grotesk", sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .nav-btn.active {
+            background: #ff3300;
+            color: #ffffff;
+            border-color: #ff3300;
+        }
+
+        .viz-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .viz-container svg {
+            border-radius: 12px;
+            overflow: visible;
+        }
+
+        #treemap rect {
+            rx: 3px;
+            ry: 3px;
+        }
+
+    
+        #info-box {
+            margin-top: 35px;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 12px 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 600px;
+            height: 42px;
+            gap: 10px;
+            text-transform: capitalize;
+            
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .color-box {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            margin-right: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+    <title>Cooper Hewitt Colors</title>
+</head>
+<body>
+    <header id="main-header">
+        <h1>COOPER HEWITT'S COLLECTION</h1>
+        <p class="subtitle">EXPLORE THE MUSEUM THROUGH COLOR</p>
+        <div class="header-divider"></div>
+  
+        <div class="nav-controls">
+            <button class="nav-btn active">Treemap View</button>
+            <button class="nav-btn">Top 12 View </button>
+        </div>
+    </header>
+
+    <div id="treemap" class="viz-container"></div>
+    <div id="stacked-bar-view" class="viz-container" style="display: none;"></div>
+
+    <div id="info-box"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function(){
+            const data = await d3.json("./cooper_hewitt_colors.json");
+            const ctg_data = await d3.json("./cooper_hewitt_by_category.json");
+
+            ctg_data.sort((a, b) => a.category.localeCompare(b.category));
+
+            const allKeys = new Set();
+            ctg_data.forEach(item => {
+                Object.keys(item).forEach(key => {
+                    if (key !== "category") {
+                        allKeys.add(key);
+                    }
+                });
+            });
+            const colorKeys = Array.from(allKeys);
+
+            const width = 1200;
+            const height = 480;
+            const margin = { top: 20, right: 30, bottom: 60, left: 40 };
+
+            const svg = d3.select("#treemap").append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const stackedSvg = d3.select("#stacked-bar-view").append("svg")
+                .attr("width", width)
+                .attr("height", height);
+
+            const root = d3.hierarchy(data).sum(d => d.value);
+
+            // Calculate total objects present in the category dataset - review this code
+            const stackedTotal = ctg_data.reduce((sum, item) => {
+                return sum + d3.sum(Object.entries(item), ([k, v]) => k !== "category" ? v : 0);
+            }, 0);
+
+            const treemapLayout = d3.treemap()
+                .size([width, height])
+                .padding(2);
+
+            const stackLayout = d3.stack()
+                .keys(colorKeys)
+                .value((d, key) => d[key] || 0)
+                .offset(d3.stackOffsetExpand);
+
+            const series = stackLayout(ctg_data);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, 1])
+                .range([height - margin.bottom, margin.top]);
+            
+            const xScale = d3.scaleBand()
+                .domain(ctg_data.map(d => d.category))
+                .range([margin.left, width - margin.right])
+                .padding(0.2);
+
+            // Create clipPaths for outer corner rounding per category column - reivew this code
+            const defs = stackedSvg.append("defs");
+            ctg_data.forEach((d, i) => {
+                defs.append("clipPath")
+                    .attr("id", `clip-bar-${i}`)
+                    .append("rect")
+                    .attr("x", xScale(d.category))
+                    .attr("y", yScale(1))
+                    .attr("width", xScale.bandwidth())
+                    .attr("height", yScale(0) - yScale(1))
+                    .attr("rx", 6)
+                    .attr("ry", 6);
+            });
+
+            // Clean X-Axis without baseline domain line or tick marks
+            const xAxisGroup = stackedSvg.append("g")
+                .attr("transform", `translate(0, ${height - margin.bottom + 15})`)
+                .call(d3.axisBottom(xScale).tickSize(0));
+
+            xAxisGroup.select(".domain").remove();
+
+            xAxisGroup.selectAll("text")
+                .style("fill", "#a0a0a0")
+                .style("font-size", "12px")
+                .style("font-weight", "500")
+                .style("text-anchor", "middle");
+
+            const infoBox = d3.select("#info-box");
+            let currentView = "treemap";
+
+            function showDefaultInfo() {
+                if (currentView === "treemap") {
+                    infoBox.html(`<strong>Total Objects in Collection:</strong> ${root.value.toLocaleString()}`);
+                } else {
+                    infoBox.html(`<strong>Total Objects in these Categories:</strong> ${stackedTotal.toLocaleString()}`);
+                }
+            }
+
+            treemapLayout(root);
+            showDefaultInfo();
+
+            //treemap 
+            svg.selectAll("rect")
+                .data(root.leaves())
+                .join("rect")
+                    .attr("x", d => d.x0)
+                    .attr("y", d => d.y0)
+                    .attr("width", d => d.x1 - d.x0)
+                    .attr("height", d => d.y1 - d.y0)
+                    .attr("stroke", "rgba(255, 255, 255, 0.4)")
+                    .attr("stroke-width", 0.33)
+                    .attr("fill", d => d.data.name)
+                    .on("mouseover", (event, d) => {
+                        infoBox.html(`
+                            <span class="color-box" style="background-color: ${d.data.name}"></span>
+                            <strong>Color:</strong> ${d.data.name} |
+                            <strong>Objects:</strong> ${d.data.value.toLocaleString()}
+                        `);
+                    })
+                    .on("mouseleave", showDefaultInfo);
+
+            const categoryGroups = stackedSvg.selectAll("g.layer")
+                .data(series)
+                .join("g")
+                    .attr("class", "layer")
+                    .attr("fill", d => d.key);
+
+            categoryGroups.selectAll("rect")
+                .data(d => d)
+                .join("rect")
+                    .attr("x", d => xScale(d.data.category))
+                    .attr("width", xScale.bandwidth())
+                    .attr("y", d => yScale(d[1]))
+                    .attr("height", d => yScale(d[0]) - yScale(d[1]))
+                    .attr("clip-path", d => `url(#clip-bar-${ctg_data.findIndex(c => c.category === d.data.category)})`)
+                    .on("mouseover", (event, d) => {
+                        const colorName = d3.select(event.currentTarget.parentNode).datum().key;
+                        const count = d.data[colorName] || 0;
+                        infoBox.html(`
+                            <span class="color-box" style="background-color: ${colorName}"></span>
+                            <strong>Category:</strong> ${d.data.category} |
+                            <strong>Color:</strong> ${colorName} |
+                            <strong>Objects:</strong> ${count.toLocaleString()}
+                        `);
+                    })
+                    .on("mouseleave", showDefaultInfo);
+
+            // navigation
+            const btnTreemap = d3.select(".nav-controls button:nth-child(1)");
+            const btnStacked = d3.select(".nav-controls button:nth-child(2)");
+            const treemapDiv = d3.select("#treemap");
+            const stackedDiv = d3.select("#stacked-bar-view");
+
+            btnTreemap.on("click", () => {
+                currentView = "treemap";
+                btnTreemap.classed("active", true);
+                btnStacked.classed("active", false);
+                treemapDiv.style("display", "flex");
+                stackedDiv.style("display", "none");
+                showDefaultInfo();
+            });
+
+            btnStacked.on("click", () => {
+                currentView = "stacked";
+                btnStacked.classed("active", true);
+                btnTreemap.classed("active", false);
+                stackedDiv.style("display", "flex");
+                treemapDiv.style("display", "none");
+                showDefaultInfo();
+            });
+        });
+    </script>
+</body>
+</html>
